@@ -1,0 +1,13 @@
+minimum-severity: high
+
+exclude-checks:
+#   - leaked_logcat_data_gpsLatitude
+#   - libraries_aslr
+  - android_debuggable_webviews
+
+include-checks:
+#   - dynamic_code_loading_check
+#   - unprotected_manifest_broadcast_receivers
+#   - snoop_network_hosts
+#   - api_excessive_data_exposure
+  - libraries_aslr
