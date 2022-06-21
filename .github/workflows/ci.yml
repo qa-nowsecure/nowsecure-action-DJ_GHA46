@@ -9,6 +9,7 @@ on:
 
 jobs:
   # EXAMPLE: Build and upload an Android application to GH artifacts.
+  #test
   build:
     runs-on: ubuntu-latest
     steps:
