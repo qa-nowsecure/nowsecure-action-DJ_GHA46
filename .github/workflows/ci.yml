@@ -1,47 +1,97 @@
-# Copyright © 2022 NowSecure Inc.
-#
-# SPDX-License-Identifier: MIT
-#
-# References
-#
-# 1. <https://github.com/actions/cache/blob/master/examples.md#node---yarn>
+# An example workflow using the NowSecure action that builds an Android application
+# in the "build" phase and then runs it against NowSecure in the "scan" phase.
+# This action is run each time a commit is pushed to the "main" branch.
 
-name: CI
+name: "NowSecure"
 
 on:
   push:
-    branches:
-      - "*"
 
 jobs:
-  check:
+  # EXAMPLE: Build and upload an Android application to GH artifacts.
+  build:
     runs-on: ubuntu-latest
-    env:
-      CI: true
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v1
+      - name: Install Java
+        uses: actions/setup-java@v2
         with:
-          node-version: "16.x"
+          java-version: "11"
+          distribution: "adopt"
+          cache: "gradle"
 
-      - name: Get cache path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
 
-      - name: Restore cache
-        id: yarn-cache
-        uses: actions/cache@v1
+      - name: Build application
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Upload application
+        uses: actions/upload-artifact@v2
         with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
+          name: app
+          path: ./app/build/outputs/apk/insecure/debug/app-insecure-debug.apk
+          retention-days: 3
 
-      - run: yarn install --frozen-lockfile --silent
+  # Scan the Android application with NowSecure.
+  scan:
+    runs-on: ubuntu-latest
+    outputs:
+      report_id: ${{ steps.upload.outputs.report_id }}
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - run: yarn lint
+      # NOTE: ripgrep is required for line-of-code identification.
+      - name: Install ripgrep
+        run: sudo apt-get install -y ripgrep
 
-      - run: yarn test
+      - name: Download application
+        uses: actions/download-artifact@v2
+        with:
+          name: app
+
+      - id: upload
+        name: NowSecure upload app
+        uses: justinhancock77/nowsecure-action/upload-app@main
+        timeout-minutes: 20
+        with:
+          token: ${{ secrets.NS_TOKEN }}
+          app_file: com.discovery.discoveryplus.androidtv.apk
+          # TODO: Replace the Group ID.
+          group_id: "c58dfa94-d060-4331-ab8e-d26241f88ff7"
+
+  # Pulls the NowSecure report, converts it to SARIF and uploads it.
+  process:
+    if: ${{ needs.scan.outputs.report_id }}
+    runs-on: ubuntu-latest
+    environment:
+      name: nowsecure-action-test-env
+    needs: scan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - run: echo "report_id output ${{ needs.scan.outputs.report_id }}"
+        shell: bash
+      - id: pull_report
+        uses: justinhancock77/nowsecure-action/convert-sarif@main
+        timeout-minutes: 70
+        with:
+          report_id: ${{ needs.scan.outputs.report_id }}
+          token: ${{ secrets.NS_TOKEN }}
+          # TODO: Replace the Group ID.
+          group_id: "c58dfa94-d060-4331-ab8e-d26241f88ff7"
+          
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: NowSecure.sarif
+
+      - name: Upload SARIF to artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: NowSecure.sarif
+          path: ./NowSecure.sarif
