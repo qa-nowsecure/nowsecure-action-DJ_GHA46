@@ -9,7 +9,6 @@ on:
 
 jobs:
   # EXAMPLE: Build and upload an Android application to GH artifacts.
-  #test
     
   # Scan the Android application with NowSecure.
   scan:
