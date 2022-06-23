@@ -29,7 +29,7 @@ jobs:
           -o app.apk
       - id: upload
         name: NowSecure upload app
-        uses: justinhancock77/nowsecure-action/upload-app@main
+        uses: nowsecure/nowsecure-action/upload-app@main
         timeout-minutes: 20
         with:
           token: ${{ secrets.NS_TOKEN }}
@@ -50,13 +50,14 @@ jobs:
       - run: echo "report_id output ${{ needs.scan.outputs.report_id }}"
         shell: bash
       - id: pull_report
-        uses: justinhancock77/nowsecure-action/convert-sarif@main
+        uses: nowsecure/nowsecure-action/convert-sarif@main
         timeout-minutes: 70
         with:
           report_id: ${{ needs.scan.outputs.report_id }}
           token: ${{ secrets.NS_TOKEN }}
           # TODO: Replace the Group ID.
           group_id: "c58dfa94-d060-4331-ab8e-d26241f88ff7"
+          enable_dependencies: true
           
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v1
