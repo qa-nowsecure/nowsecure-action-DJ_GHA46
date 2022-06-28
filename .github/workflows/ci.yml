@@ -57,7 +57,7 @@ jobs:
           token: ${{ secrets.NS_TOKEN }}
           # TODO: Replace the Group ID.
           group_id: "c58dfa94-d060-4331-ab8e-d26241f88ff7"
-          enable_dependencies: true
+          #enable_dependencies: true
           
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v1
