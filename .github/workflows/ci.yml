@@ -38,6 +38,7 @@ jobs:
           group_id: "c58dfa94-d060-4331-ab8e-d26241f88ff7"
 
   # Pulls the NowSecure report, converts it to SARIF and uploads it.
+  #testGHA-79
   process:
     if: ${{ needs.scan.outputs.report_id }}
     runs-on: ubuntu-latest
